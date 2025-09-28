@@ -1,12 +1,16 @@
 pipeline {
-    // Use a Python Docker image as the build agent
-    agent {
-        any {
-            image 'python:3.12-slim'   // Python 3.12 installed
-            args '-u root:root'        // Run as root to install dependencies
+    agent any
+    options {
+        ansiColor('xterm')  // Must be inside 'options' block
+    }
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Building project...'
+            }
         }
     }
-
+}
     environment {
         PYTHON_CMD = "python"         // Python executable inside container
         DOCKER_IMAGE_NAME = "devops-app:latest"
@@ -105,4 +109,5 @@ pipeline {
         }
     }
 }
+
 
