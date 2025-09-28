@@ -1,11 +1,16 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'python:3.11'   // Official Python image
+            args '-v /var/jenkins_home:/var/jenkins_home' // Optional: persist workspace
+        }
+    }
 
     environment {
         PYTHON_CMD = "python"
         DOCKER_IMAGE_NAME = "devops-app:latest"
         DOCKER_REGISTRY = "https://index.docker.io/v1/"
-        DOCKER_CREDENTIALS = "dockerhub-credentials-id"
+        DOCKER_CREDENTIALS = "dockerhub-credentials-id" // Replace with your Jenkins credentials ID
     }
 
     options {
@@ -14,6 +19,8 @@ pipeline {
     }
 
     stages {
+
+        // --------------------------
         stage('Checkout') {
             steps {
                 echo "Cloning repository..."
@@ -21,6 +28,7 @@ pipeline {
             }
         }
 
+        // --------------------------
         stage('Install Dependencies') {
             steps {
                 dir('app') {
@@ -31,6 +39,7 @@ pipeline {
             }
         }
 
+        // --------------------------
         stage('Run Unit Tests') {
             steps {
                 dir('app') {
@@ -47,6 +56,7 @@ pipeline {
             }
         }
 
+        // --------------------------
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
@@ -56,9 +66,10 @@ pipeline {
             }
         }
 
+        // --------------------------
         stage('Push to Docker Registry') {
             steps {
-                echo "Pushing Docker image to registry..."
+                echo "Pushing Docker image to Docker Hub..."
                 script {
                     docker.withRegistry("${env.DOCKER_REGISTRY}", "${env.DOCKER_CREDENTIALS}") {
                         docker.image("${env.DOCKER_IMAGE_NAME}").push()
@@ -67,6 +78,7 @@ pipeline {
             }
         }
 
+        // --------------------------
         stage('Deploy') {
             steps {
                 echo "Deploying application using Docker Compose..."
