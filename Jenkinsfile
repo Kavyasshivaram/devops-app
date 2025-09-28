@@ -1,75 +1,107 @@
 pipeline {
+    // Use a Python Docker image as the build agent
     agent {
         docker {
-            image 'python:3.12-slim'
-            args '-u root:root'
+            image 'python:3.12-slim'   // Python 3.12 installed
+            args '-u root:root'        // Run as root to install dependencies
         }
     }
 
     environment {
-        PYTHON_CMD = "python"
+        PYTHON_CMD = "python"         // Python executable inside container
+        DOCKER_IMAGE_NAME = "devops-app:latest"
+        DOCKER_REGISTRY = "https://index.docker.io/v1/"
+        DOCKER_CREDENTIALS = "dockerhub-credentials-id" // Replace with your Jenkins credentials ID
+    }
+
+    options {
+        skipDefaultCheckout()         // We'll do explicit checkout
+        ansiColor('xterm')            // Colorize Jenkins console output
     }
 
     stages {
+
+        // --------------------------
         stage('Checkout') {
             steps {
+                echo "Cloning repository..."
                 git url: 'https://github.com/Kavyasshivaram/devops-app.git', branch: 'main'
             }
         }
 
+        // --------------------------
         stage('Install Dependencies') {
             steps {
                 dir('app') {
+                    echo "Upgrading pip and installing requirements..."
                     sh "${env.PYTHON_CMD} -m pip install --upgrade pip"
                     sh "${env.PYTHON_CMD} -m pip install -r requirements.txt"
                 }
             }
         }
 
+        // --------------------------
         stage('Run Unit Tests') {
             steps {
-                sh 'mkdir -p app/reports'
-                sh "export PYTHONPATH=$PWD && ${env.PYTHON_CMD} -m pytest -q --junitxml=app/reports/junit.xml"
+                dir('app') {
+                    echo "Running unit tests..."
+                    sh 'mkdir -p reports'
+                    // Run pytest in verbose mode and print all output to console
+                    sh "${env.PYTHON_CMD} -m pytest -v --capture=no --junitxml=reports/junit.xml"
+                }
             }
             post {
                 always {
-                    junit 'app/reports/junit.xml'
+                    echo "Archiving test results..."
+                    junit 'app/reports/junit.xml'   // Display test results in Jenkins
                 }
             }
         }
 
+        // --------------------------
         stage('Build Docker Image') {
             steps {
+                echo "Building Docker image..."
                 script {
-                    docker.build("devops-app:latest", ".")
+                    docker.build("${env.DOCKER_IMAGE_NAME}", ".")
                 }
             }
         }
 
-        stage('Push to Registry') {
+        // --------------------------
+        stage('Push to Docker Registry') {
             steps {
+                echo "Pushing Docker image to registry..."
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials-id') {
-                        docker.image("devops-app:latest").push()
+                    docker.withRegistry("${env.DOCKER_REGISTRY}", "${env.DOCKER_CREDENTIALS}") {
+                        docker.image("${env.DOCKER_IMAGE_NAME}").push()
                     }
                 }
             }
         }
 
+        // --------------------------
         stage('Deploy') {
             steps {
-                sh 'docker-compose down || true'
-                sh 'docker-compose up -d'
+                echo "Deploying application using Docker Compose..."
+                dir('app') {
+                    sh 'docker-compose down || true'
+                    sh 'docker-compose up -d'
+                }
             }
         }
     }
 
+    // --------------------------
     post {
         success {
             echo 'Pipeline completed successfully! 🎉'
         }
         failure {
             echo 'Pipeline failed! ❌ Check logs for details.'
+        }
+        always {
+            echo 'Pipeline finished. Cleaning up...'
         }
     }
 }
