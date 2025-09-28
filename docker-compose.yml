@@ -1,7 +1,7 @@
 version: '3.8'
 services:
-  registry:
-    image: registry:2
+  devops-app:
+    image: devops-app:latest
     ports: ["5000:5000"]
 
   jenkins:
@@ -31,3 +31,4 @@ services:
 
 volumes:
   jenkins_home:
+
