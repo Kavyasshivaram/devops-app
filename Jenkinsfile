@@ -1,7 +1,7 @@
 pipeline {
     // Use a Python Docker image as the build agent
     agent {
-        docker {
+        any {
             image 'python:3.12-slim'   // Python 3.12 installed
             args '-u root:root'        // Run as root to install dependencies
         }
@@ -105,3 +105,4 @@ pipeline {
         }
     }
 }
+
