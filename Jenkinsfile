@@ -1,46 +1,58 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    IMAGE_NAME = "localhost:5000/devops-app"
-    APP_DIR = "app"
-  }
+    environment {
+        PYTHON_CMD = "python3"
+    }
 
-  stages {
-    stage('Checkout') { steps { checkout scm } }
-
-    stage('Unit Tests') {
-      steps {
-        dir("${APP_DIR}") {
-          sh 'python -m pytest -q --junitxml=reports/junit.xml || true'
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/Kavyasshivaram/devops-app.git', branch: 'main'
+            }
         }
-      }
-      post { always { junit 'app/reports/junit.xml' } }
-    }
 
-    stage('Build Docker Image') {
-      steps { sh "docker build -t ${IMAGE_NAME}:latest ${APP_DIR}" }
-    }
-
-    stage('SonarQube Scan') {
-      steps {
-        withSonarQubeEnv('sonarqube') {
-          sh "sonar-scanner -Dsonar.projectBaseDir=. -Dsonar.login=${env.SONAR_TOKEN}"
+        stage('Install Dependencies') {
+            steps {
+                dir('app') {
+                    sh 'python3 -m pip install --upgrade pip'
+                    sh 'python3 -m pip install -r requirements.txt'
+                }
+            }
         }
-      }
-    }
 
-    stage('Push to Registry') {
-      steps { sh "docker push ${IMAGE_NAME}:latest" }
-    }
+        stage('Run Unit Tests') {
+            steps {
+                dir('app') {
+                    sh 'mkdir -p reports'
+                    sh 'python3 -m pytest -q --junitxml=reports/junit.xml'
+                }
+            }
+            post {
+                always {
+                    junit 'app/reports/junit.xml'
+                }
+            }
+        }
 
-    stage('Deploy') {
-      steps {
-        sh """
-        docker rm -f devops-app || true
-        docker run -d --name devops-app -p 5000:5000 ${IMAGE_NAME}:latest
-        """
-      }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("devops-app:latest", ".")
+                }
+            }
+        }
+
+        stage('Push to Registry') {
+            steps {
+                echo "Docker push step here (configure your registry)"
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo "Deployment step here (docker-compose or Kubernetes)"
+            }
+        }
     }
-  }
 }
