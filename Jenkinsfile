@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.11'   // Official Python image
-            args '-v /var/jenkins_home:/var/jenkins_home' // Optional: persist workspace
-        }
-    }
+    agent any
 
     environment {
         PYTHON_CMD = "python"
@@ -29,23 +24,32 @@ pipeline {
         }
 
         // --------------------------
-        stage('Install Dependencies') {
+        stage('Install Dependencies in Docker') {
             steps {
                 dir('app') {
-                    echo "Upgrading pip and installing requirements..."
-                    sh "${env.PYTHON_CMD} -m pip install --upgrade pip"
-                    sh "${env.PYTHON_CMD} -m pip install -r requirements.txt"
+                    echo "Installing Python dependencies inside Docker..."
+                    // Run Python commands inside a temporary Python container
+                    sh """
+                    docker run --rm -v \$PWD:/app -w /app python:3.11 bash -c '
+                        python -m pip install --upgrade pip &&
+                        python -m pip install -r requirements.txt
+                    '
+                    """
                 }
             }
         }
 
         // --------------------------
-        stage('Run Unit Tests') {
+        stage('Run Unit Tests in Docker') {
             steps {
                 dir('app') {
-                    echo "Running unit tests..."
+                    echo "Running unit tests inside Docker..."
                     sh 'mkdir -p reports'
-                    sh "${env.PYTHON_CMD} -m pytest -v --capture=no --junitxml=reports/junit.xml"
+                    sh """
+                    docker run --rm -v \$PWD:/app -w /app python:3.11 bash -c '
+                        python -m pytest -v --capture=no --junitxml=reports/junit.xml
+                    '
+                    """
                 }
             }
             post {
@@ -67,7 +71,7 @@ pipeline {
         }
 
         // --------------------------
-        stage('Push to Docker Registry') {
+        stage('Push Docker Image') {
             steps {
                 echo "Pushing Docker image to Docker Hub..."
                 script {
