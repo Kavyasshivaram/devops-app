@@ -1,31 +1,19 @@
 pipeline {
     agent any
-    options {
-        ansiColor('xterm')  // Must be inside 'options' block
-    }
-    stages {
-        stage('Build') {
-            steps {
-                echo 'Building project...'
-            }
-        }
-    }
-}
+
     environment {
-        PYTHON_CMD = "python"         // Python executable inside container
+        PYTHON_CMD = "python"
         DOCKER_IMAGE_NAME = "devops-app:latest"
         DOCKER_REGISTRY = "https://index.docker.io/v1/"
-        DOCKER_CREDENTIALS = "dockerhub-credentials-id" // Replace with your Jenkins credentials ID
+        DOCKER_CREDENTIALS = "dockerhub-credentials-id"
     }
 
     options {
-        skipDefaultCheckout()         // We'll do explicit checkout
-        ansiColor('xterm')            // Colorize Jenkins console output
+        skipDefaultCheckout()
+        ansiColor('xterm')
     }
 
     stages {
-
-        // --------------------------
         stage('Checkout') {
             steps {
                 echo "Cloning repository..."
@@ -33,7 +21,6 @@ pipeline {
             }
         }
 
-        // --------------------------
         stage('Install Dependencies') {
             steps {
                 dir('app') {
@@ -44,25 +31,22 @@ pipeline {
             }
         }
 
-        // --------------------------
         stage('Run Unit Tests') {
             steps {
                 dir('app') {
                     echo "Running unit tests..."
                     sh 'mkdir -p reports'
-                    // Run pytest in verbose mode and print all output to console
                     sh "${env.PYTHON_CMD} -m pytest -v --capture=no --junitxml=reports/junit.xml"
                 }
             }
             post {
                 always {
                     echo "Archiving test results..."
-                    junit 'app/reports/junit.xml'   // Display test results in Jenkins
+                    junit 'app/reports/junit.xml'
                 }
             }
         }
 
-        // --------------------------
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
@@ -72,7 +56,6 @@ pipeline {
             }
         }
 
-        // --------------------------
         stage('Push to Docker Registry') {
             steps {
                 echo "Pushing Docker image to registry..."
@@ -84,7 +67,6 @@ pipeline {
             }
         }
 
-        // --------------------------
         stage('Deploy') {
             steps {
                 echo "Deploying application using Docker Compose..."
@@ -96,7 +78,6 @@ pipeline {
         }
     }
 
-    // --------------------------
     post {
         success {
             echo 'Pipeline completed successfully! 🎉'
@@ -109,5 +90,3 @@ pipeline {
         }
     }
 }
-
-
