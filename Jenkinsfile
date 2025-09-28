@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     environment {
-        PYTHON_CMD = "python"
+        PYTHON_CMD = "python3"  // Python inside Docker image
         DOCKER_IMAGE_NAME = "devops-app:latest"
         DOCKER_REGISTRY = "https://index.docker.io/v1/"
-        DOCKER_CREDENTIALS = "dockerhub-credentials-id" // Replace with your Jenkins credentials ID
+        DOCKER_CREDENTIALS = "dockerhub-credentials-id" // Jenkins Docker Hub credentials ID
     }
 
     options {
@@ -28,7 +28,6 @@ pipeline {
             steps {
                 dir('app') {
                     echo "Installing Python dependencies inside Docker..."
-                    // Run Python commands inside a temporary Python container
                     sh """
                     docker run --rm -v \$PWD:/app -w /app python:3.11 bash -c '
                         python -m pip install --upgrade pip &&
